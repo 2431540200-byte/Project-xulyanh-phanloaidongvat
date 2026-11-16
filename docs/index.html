@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#101c2c">
+<meta name="description" content="AI-powered animal image recognition using ResNet18 and ONNX Runtime Web.">
+<title>ANIMALS AI | Intelligent Animal Recognition</title>
+
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/ort.min.js"></script>
+
+<style>
+:root {
+    --navy: #101c2c;
+    --navy-light: #1a2b40;
+    --green: #a3e635;
+    --green-dark: #65a30d;
+    --text: #182638;
+    --muted: #718096;
+    --surface: #ffffff;
+    --background: #f4f7fa;
+    --border: #e5eaf0;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    font-family: Inter, "Segoe UI", Arial, sans-serif;
+    color: var(--text);
+    background: var(--background);
+}
+
+button, input { font: inherit; }
+
+.navbar {
+    background: var(--navy);
+    color: white;
+    padding: 0 7%;
+    height: 76px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 19px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+}
+
+.brand-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    background: var(--green);
+    color: var(--navy);
+    display: grid;
+    place-items: center;
+    font-size: 21px;
+}
+
+.nav-right {
+    color: #bdc9d7;
+    font-size: 13px;
+}
+
+.hero {
+    background:
+      radial-gradient(circle at 80% 20%, #2b4358 0, transparent 30%),
+      linear-gradient(120deg, #101c2c, #1b3045);
+    color: white;
+    padding: 65px 20px 85px;
+    text-align: center;
+}
+
+.eyebrow {
+    display: inline-block;
+    color: var(--green);
+    border: 1px solid #536c47;
+    background: #1e352d;
+    padding: 8px 15px;
+    border-radius: 30px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.7px;
+}
+
+.hero h1 {
+    font-size: clamp(34px, 5vw, 54px);
+    margin: 23px 0 14px;
+    letter-spacing: -1.5px;
+}
+
+.hero h1 span { color: var(--green); }
+
+.hero p {
+    max-width: 650px;
+    margin: auto;
+    color: #bdc9d7;
+    line-height: 1.8;
+    font-size: 16px;
+}
+
+.container {
+    width: min(1050px, 92%);
+    margin: -42px auto 60px;
+    position: relative;
+}
+
+.card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 30px;
+    box-shadow: 0 12px 40px rgba(20, 40, 60, .07);
+    margin-bottom: 24px;
+}
+
+.section-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 22px;
+}
+
+.section-heading h2 {
+    font-size: 21px;
+    margin: 0;
+}
+
+.status {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 12px;
+    color: var(--muted);
+    background: #f3f6f8;
+    padding: 9px 13px;
+    border-radius: 30px;
+}
+
+.dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #f59e0b;
+}
+
+.dot.ready { background: #22c55e; }
+.dot.error { background: #ef4444; }
+
+.upload-area {
+    border: 2px dashed #cbd5df;
+    background: #f9fbfc;
+    min-height: 220px;
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 28px;
+    cursor: pointer;
+    transition: .2s;
+}
+
+.upload-area:hover,
+.upload-area.dragover {
+    border-color: var(--green-dark);
+    background: #f7fce9;
+}
+
+.upload-icon {
+    width: 58px;
+    height: 58px;
+    border-radius: 17px;
+    display: grid;
+    place-items: center;
+    background: #edf5df;
+    color: #527b16;
+    font-size: 27px;
+    margin-bottom: 13px;
+}
+
+.upload-area h3 {
+    margin: 0 0 8px;
+    font-size: 17px;
+}
+
+.upload-area p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.7;
+}
+
+.upload-area strong { color: var(--green-dark); }
+
+#fileInput { display: none; }
+
+.preview-wrap {
+    display: none;
+    margin-top: 22px;
+    text-align: center;
+}
+
+#preview {
+    max-width: 100%;
+    max-height: 360px;
+    object-fit: contain;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+}
+
+.file-name {
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 10px;
+    overflow-wrap: anywhere;
+}
+
+.actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 22px;
+}
+
+.btn {
+    border: none;
+    border-radius: 11px;
+    padding: 14px 20px;
+    cursor: pointer;
+    font-weight: 700;
+    transition: .2s;
+}
+
+.btn-primary {
+    background: var(--navy);
+    color: white;
+    flex: 1;
+}
+
+.btn-primary:hover { background: #243c55; }
+
+.btn-secondary {
+    background: #edf1f5;
+    color: #405168;
+}
+
+.btn:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+}
+
+.result {
+    display: none;
+    margin-top: 27px;
+    border-top: 1px solid var(--border);
+    padding-top: 25px;
+}
+
+.result-title {
+    font-size: 12px;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    font-weight: 700;
+}
+
+.result-main {
+    background: #f6f9ef;
+    border: 1px solid #e5edcf;
+    border-radius: 16px;
+    padding: 23px;
+    margin: 15px 0 25px;
+}
+
+.prediction-name {
+    font-size: 30px;
+    font-weight: 800;
+    color: #365b12;
+    margin: 5px 0;
+    text-transform: capitalize;
+}
+
+.confidence {
+    color: #60734a;
+    font-size: 14px;
+}
+
+.prob-title {
+    font-size: 16px;
+    margin: 0 0 19px;
+}
+
+.bar-row {
+    display: grid;
+    grid-template-columns: 100px 1fr 65px;
+    gap: 12px;
+    align-items: center;
+    margin: 14px 0;
+    font-size: 13px;
+}
+
+.bar-label {
+    text-transform: capitalize;
+    font-weight: 600;
+}
+
+.bar-bg {
+    height: 9px;
+    background: #e9edf1;
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+.bar {
+    height: 100%;
+    background: #94c83d;
+    border-radius: 20px;
+    transition: width .5s;
+}
+
+.bar-value {
+    text-align: right;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+}
+
+.info-item {
+    background: #f7f9fb;
+    border: 1px solid var(--border);
+    border-radius: 13px;
+    padding: 19px;
+}
+
+.info-item span {
+    display: block;
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 9px;
+    text-transform: uppercase;
+    letter-spacing: .7px;
+}
+
+.info-item strong {
+    font-size: 15px;
+}
+
+.about-text {
+    color: var(--muted);
+    line-height: 1.8;
+    font-size: 14px;
+    margin-bottom: 0;
+}
+
+.footer {
+    background: var(--navy);
+    color: #b8c4d1;
+    padding: 30px 20px;
+    text-align: center;
+    font-size: 12px;
+    line-height: 1.8;
+}
+
+.footer strong { color: var(--green); }
+
+@media(max-width: 700px) {
+    .navbar { padding: 0 5%; }
+    .nav-right { display: none; }
+    .hero { padding: 50px 18px 75px; }
+    .card { padding: 21px; }
+    .info-grid { grid-template-columns: repeat(2, 1fr); }
+    .bar-row { grid-template-columns: 75px 1fr 52px; gap: 7px; }
+}
+
+@media(max-width: 420px) {
+    .actions { flex-direction: column; }
+    .info-grid { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+
+<body>
+
+<nav class="navbar">
+    <div class="brand">
+        <div class="brand-icon">A</div>
+        ANIMALS AI
+    </div>
+    <div class="nav-right">IMAGE INTELLIGENCE PLATFORM</div>
+</nav>
+
+<section class="hero">
+    <div class="eyebrow">ARTIFICIAL INTELLIGENCE · COMPUTER VISION</div>
+    <h1>Intelligent <span>Animal</span><br>Recognition</h1>
+    <p>
+        An AI-powered image classification system designed to
+        identify 10 animal categories using deep learning.
+    </p>
+</section>
+
+<main class="container">
+
+    <section class="card">
+        <div class="section-heading">
+            <h2>Image Recognition</h2>
+            <div class="status">
+                <span class="dot" id="statusDot"></span>
+                <span id="statusText">Initializing AI model...</span>
+            </div>
+        </div>
+
+        <label class="upload-area" id="uploadArea" for="fileInput">
+            <div class="upload-icon">↥</div>
+            <h3>Upload an animal image</h3>
+            <p>
+                Drag and drop your image here or
+                <strong>browse files</strong><br>
+                JPG, PNG or WEBP · Maximum 15 MB
+            </p>
+        </label>
+
+        <input id="fileInput" type="file"
+               accept="image/jpeg,image/png,image/webp">
+
+        <div class="preview-wrap" id="previewWrap">
+            <img id="preview" alt="Selected animal image">
+            <div class="file-name" id="fileName"></div>
+        </div>
+
+        <div class="actions">
+            <button class="btn btn-primary" id="predictBtn" disabled>
+                Analyze Image
+            </button>
+            <button class="btn btn-secondary" id="resetBtn">
+                Reset
+            </button>
+        </div>
+
+        <div class="result" id="result">
+            <div class="result-title">CLASSIFICATION RESULT</div>
+
+            <div class="result-main">
+                <div class="prediction-name" id="prediction"></div>
+                <div class="confidence" id="confidence"></div>
+            </div>
+
+            <h3 class="prob-title">Class Probability Distribution</h3>
+            <div id="probabilities"></div>
+        </div>
+    </section>
+
+    <section class="card">
+        <div class="section-heading">
+            <h2>Model Specifications</h2>
+        </div>
+
+        <div class="info-grid">
+            <div class="info-item">
+                <span>Architecture</span>
+                <strong>ResNet18</strong>
+            </div>
+            <div class="info-item">
+                <span>Dataset</span>
+                <strong>Animals-10</strong>
+            </div>
+            <div class="info-item">
+                <span>Categories</span>
+                <strong>10 Classes</strong>
+            </div>
+            <div class="info-item">
+                <span>Input Size</span>
+                <strong>224 × 224</strong>
+            </div>
+            <div class="info-item">
+                <span>Model Format</span>
+                <strong>ONNX</strong>
+            </div>
+            <div class="info-item">
+                <span>Inference</span>
+                <strong>ONNX Runtime</strong>
+            </div>
+            <div class="info-item">
+                <span>Execution</span>
+                <strong>Browser / WASM</strong>
+            </div>
+            <div class="info-item">
+                <span>Processing</span>
+                <strong>Client-side</strong>
+            </div>
+        </div>
+
+        <p class="about-text">
+            The model performs image inference directly in the browser.
+            Uploaded images are processed locally using ONNX Runtime Web.
+            Prediction confidence represents the model's estimated
+            probability distribution, not a guarantee of correctness.
+        </p>
+    </section>
+
+</main>
+
+<footer>
+    <strong>ANIMALS AI</strong> · Intelligent Animal Recognition<br>
+    Deep Learning & Computer Vision Project
+</footer>
+
+<script>
+const CLASSES = [
+    "butterfly", "cat", "chicken", "cow", "dog",
+    "elephant", "horse", "sheep", "spider", "squirrel"
+];
+
+const MEAN = [0.485, 0.456, 0.406];
+const STD = [0.229, 0.224, 0.225];
+
+let session = null;
+let selectedImage = null;
+let previewUrl = null;
+
+const $ = id => document.getElementById(id);
+
+function setStatus(message, state) {
+    $("statusText").textContent = message;
+    $("statusDot").className = "dot" + (state ? " " + state : "");
+}
+
+async function loadModel() {
+    try {
+        session = await ort.InferenceSession.create(
+            "./model_single.onnx",
+            { executionProviders: ["wasm"] }
+        );
+
+        setStatus("AI model ready", "ready");
+        $("predictBtn").disabled = !selectedImage;
+    } catch (error) {
+        console.error(error);
+        setStatus("Model loading failed", "error");
+    }
+}
+
+function selectFile(file) {
+    if (!file) return;
+
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+        alert("Please select a JPG, PNG or WEBP image.");
+        return;
+    }
+
+    if (file.size > 15 * 1024 * 1024) {
+        alert("Image size must not exceed 15 MB.");
+        return;
+    }
+
+    selectedImage = file;
+
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    previewUrl = URL.createObjectURL(file);
+
+    $("preview").src = previewUrl;
+    $("previewWrap").style.display = "block";
+    $("fileName").textContent = file.name;
+    $("result").style.display = "none";
+    $("predictBtn").disabled = !session;
+}
+
+$("fileInput").addEventListener("change", event => {
+    selectFile(event.target.files[0]);
+});
+
+const uploadArea = $("uploadArea");
+
+uploadArea.addEventListener("dragover", event => {
+    event.preventDefault();
+    uploadArea.classList.add("dragover");
+});
+
+uploadArea.addEventListener("dragleave", () => {
+    uploadArea.classList.remove("dragover");
+});
+
+uploadArea.addEventListener("drop", event => {
+    event.preventDefault();
+    uploadArea.classList.remove("dragover");
+    selectFile(event.dataTransfer.files[0]);
+});
+
+function preprocessImage(image) {
+    const scale = 256 / Math.min(image.width, image.height);
+
+    const width = Math.round(image.width * scale);
+    const height = Math.round(image.height * scale);
+
+    const resized = document.createElement("canvas");
+    resized.width = width;
+    resized.height = height;
+
+    const rctx = resized.getContext("2d");
+    rctx.imageSmoothingEnabled = true;
+    rctx.imageSmoothingQuality = "high";
+    rctx.drawImage(image, 0, 0, width, height);
+
+    const crop = document.createElement("canvas");
+    crop.width = 224;
+    crop.height = 224;
+
+    const ctx = crop.getContext("2d");
+
+    const left = Math.floor((width - 224) / 2);
+    const top = Math.floor((height - 224) / 2);
+
+    ctx.drawImage(
+        resized,
+        left, top, 224, 224,
+        0, 0, 224, 224
+    );
+
+    const pixels = ctx.getImageData(0, 0, 224, 224).data;
+    const input = new Float32Array(3 * 224 * 224);
+
+    for (let y = 0; y < 224; y++) {
+        for (let x = 0; x < 224; x++) {
+            const p = (y * 224 + x) * 4;
+            const i = y * 224 + x;
+
+            for (let c = 0; c < 3; c++) {
+                const value = pixels[p + c] / 255;
+                input[c * 224 * 224 + i] =
+                    (value - MEAN[c]) / STD[c];
+            }
+        }
+    }
+
+    return input;
+}
+
+function softmax(logits) {
+    const max = Math.max(...logits);
+    const exp = logits.map(v => Math.exp(v - max));
+    const sum = exp.reduce((a, b) => a + b, 0);
+    return exp.map(v => v / sum);
+}
+
+$("predictBtn").addEventListener("click", async () => {
+    if (!session || !selectedImage) return;
+
+    $("predictBtn").disabled = true;
+    $("predictBtn").textContent = "Analyzing image...";
+
+    try {
+        const image = await createImageBitmap(selectedImage);
+        const inputData = preprocessImage(image);
+
+        const tensor = new ort.Tensor(
+            "float32",
+            inputData,
+            [1, 3, 224, 224]
+        );
+
+        const outputs = await session.run({
+            [session.inputNames[0]]: tensor
+        });
+
+        const logits = Array.from(
+            outputs[session.outputNames[0]].data
+        );
+
+        const probabilities = softmax(logits);
+
+        const ranking = CLASSES.map((name, index) => ({
+            name,
+            probability: probabilities[index]
+        })).sort((a, b) => b.probability - a.probability);
+
+        const best = ranking[0];
+
+        $("prediction").textContent = best.name;
+        $("confidence").textContent =
+            "Estimated confidence: " +
+            (best.probability * 100).toFixed(2) + "%";
+
+        $("probabilities").innerHTML = ranking.map(item => `
+            <div class="bar-row">
+                <span class="bar-label">${item.name}</span>
+                <div class="bar-bg">
+                    <div class="bar" style="width:${item.probability * 100}%"></div>
+                </div>
+                <span class="bar-value">
+                    ${(item.probability * 100).toFixed(1)}%
+                </span>
+            </div>
+        `).join("");
+
+        $("result").style.display = "block";
+        $("result").scrollIntoView({
+            behavior: "smooth",
+            block: "nearest"
+        });
+
+    } catch (error) {
+        console.error(error);
+        alert("Image analysis failed: " + error.message);
+    } finally {
+        $("predictBtn").disabled = !session;
+        $("predictBtn").textContent = "Analyze Image";
+    }
+});
+
+$("resetBtn").addEventListener("click", () => {
+    selectedImage = null;
+    $("fileInput").value = "";
+    $("previewWrap").style.display = "none";
+    $("result").style.display = "none";
+    $("predictBtn").disabled = true;
+
+    if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+        previewUrl = null;
+    }
+
+    $("preview").removeAttribute("src");
+    $("fileName").textContent = "";
+});
+
+loadModel();
+</script>
+
+</body>
+</html>
